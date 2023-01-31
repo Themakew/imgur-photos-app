@@ -33,6 +33,8 @@ final class HomeViewController: UIViewController {
         super.viewDidLoad()
         setupView()
         bindRx()
+
+        viewModel.input.getData.accept(())
     }
 
     // MARK: - Private Methods

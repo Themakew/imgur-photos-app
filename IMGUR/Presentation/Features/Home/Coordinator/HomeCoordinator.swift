@@ -26,7 +26,11 @@ final class HomeCoordinator: NavigationCoordinator<HomeRouter> {
     override func prepareTransition(for route: HomeRouter) -> NavigationTransition {
         switch route {
         case .home:
-            let viewModel = HomeViewModel(router: weakRouter)
+            let service = ServiceAPICall()
+            let imageService = ImageAPIService(serviceAPI: service)
+            let imageRepository = ImageRepository(imageAPIService: imageService)
+            let imageUseCase = ImageUseCase(imageRepository: imageRepository)
+            let viewModel = HomeViewModel(router: weakRouter, imageUseCase: imageUseCase)
             let viewController = HomeViewController(viewModel: viewModel)
             return .push(viewController)
         case .dismiss:

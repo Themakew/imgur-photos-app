@@ -17,11 +17,11 @@ protocol HomeViewModelProtocol {
 }
 
 protocol HomeViewModelInput {
-
+    var getData: PublishRelay<Void> { get }
 }
 
 protocol HomeViewModelOutput {
-
+    var dataSource: BehaviorRelay<[ImageEntity]> { get }
 }
 
 extension HomeViewModelProtocol where Self: HomeViewModelInput & HomeViewModelOutput {
@@ -31,15 +31,25 @@ extension HomeViewModelProtocol where Self: HomeViewModelInput & HomeViewModelOu
 
 final class HomeViewModel: HomeViewModelProtocol, HomeViewModelInput, HomeViewModelOutput {
 
+    // MARK: - Internal Properties
+
+    var getData = PublishRelay<Void>()
+    var dataSource = BehaviorRelay<[ImageEntity]>(value: [])
+
     // MARK: - Private Properties
 
     private let router: WeakRouter<HomeRouter>
+    private let imageUseCase: ImageUseCaseProtocol
     private let disposeBag = DisposeBag()
 
     // MARK: - Initializer
 
-    init(router: WeakRouter<HomeRouter>) {
+    init(
+        router: WeakRouter<HomeRouter>,
+        imageUseCase: ImageUseCaseProtocol
+    ) {
         self.router = router
+        self.imageUseCase = imageUseCase
 
         bindRx()
     }
@@ -47,6 +57,23 @@ final class HomeViewModel: HomeViewModelProtocol, HomeViewModelInput, HomeViewMo
     // MARK: - Private Methods
 
     private func bindRx() {
+        let responseResultObservable = getData
+            .flatMap(weak: self) { this, _ -> Observable<Result<DataEntity, NetworkError>> in
+                return this.imageUseCase.getGallery()
+                    .asObservable()
+            }
+            .share()
 
+        responseResultObservable
+            .withUnretained(self)
+            .subscribe(onNext: { this, result in
+                switch result {
+                case let .success(response):
+                    this.dataSource.accept(response.data)
+                case let .failure(error):
+                    break
+                }
+            })
+            .disposed(by: disposeBag)
     }
 }
